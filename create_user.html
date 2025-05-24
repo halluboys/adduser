@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Buat User VLESS Baru</title>
+</head>
+<body>
+  <h2>Buat User VLESS Baru</h2>
+  <form id="userForm">
+    <label for="subdomain">Subdomain:</label><br />
+    <input type="text" id="subdomain" name="subdomain" required /><br /><br />
+
+    <label for="days">Masa aktif (hari):</label><br />
+    <input type="number" id="days" name="days" min="1" required /><br /><br />
+
+    <button type="submit">Buat User</button>
+  </form>
+
+  <h3>Hasil:</h3>
+  <pre id="result"></pre>
+  <button id="downloadBtn" style="display:none;">Download Config (.txt)</button>
+
+  <script>
+    const form = document.getElementById('userForm');
+    const result = document.getElementById('result');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const workerUrl = 'xlon.hulyasyifanazia.workers.dev'; // Ganti sesuai alamat Worker kamu
+    let lastConfig = '';
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const subdomain = document.getElementById('subdomain').value.trim();
+      const days = parseInt(document.getElementById('days').value);
+
+      if (!subdomain || !days || days <= 0) {
+        result.textContent = 'Isi subdomain dan masa aktif dengan benar.';
+        downloadBtn.style.display = 'none';
+        return;
+      }
+
+      try {
+        const response = await fetch(workerUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subdomain, days }),
+        });
+
+        if (!response.ok) {
+          const text = await response.text();
+          result.textContent = `Error: ${text}`;
+          downloadBtn.style.display = 'none';
+          return;
+        }
+
+        const data = await response.json();
+        lastConfig = data.vless;
+        result.textContent = JSON.stringify(data, null, 2);
+        downloadBtn.style.display = 'inline-block';
+      } catch (error) {
+        result.textContent = `Request gagal: ${error.message}`;
+        downloadBtn.style.display = 'none';
+      }
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if (!lastConfig) return;
+      const blob = new Blob([lastConfig], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'vless-config.txt';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>
